@@ -592,10 +592,6 @@
   function preloadEquipmentAssets() {
     const sources=new Set();
   
-    for(const set of D.sonataSets||[]){
-      if(set.icon) sources.add(set.icon);
-    }
-  
     for(const profile of D.profiles){
       for(const build of profile.builds||[]){
         const weapon=getRecommendedWeapon(profile,build);
@@ -606,8 +602,37 @@
       }
     }
   
-    for(const src of sources){
-      loadAsset(src).catch(()=>{});
+    const queue=[...sources];
+    let index=0;
+  
+    const pump=()=>{
+      const stop=Math.min(index+6,queue.length);
+  
+      while(index<stop){
+        loadAsset(queue[index++]).catch(()=>{});
+      }
+  
+      if(index<queue.length){
+        if("requestIdleCallback" in window){
+          requestIdleCallback(pump,{timeout:500});
+        }else{
+          setTimeout(pump,60);
+        }
+      }
+    };
+  
+    const start=()=>{
+      if("requestIdleCallback" in window){
+        requestIdleCallback(pump,{timeout:800});
+      }else{
+        setTimeout(pump,250);
+      }
+    };
+  
+    if(document.readyState==="complete"){
+      start();
+    }else{
+      window.addEventListener("load",start,{once:true});
     }
   }
 
