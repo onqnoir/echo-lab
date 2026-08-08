@@ -590,28 +590,25 @@
   }
   const isAssetReady=src=>assetCache.get(src)?.status==="ready";
   function preloadEquipmentAssets() {
-    const recommendedWeaponSources=[];
+    const sources=new Set();
+  
+    for(const set of D.sonataSets||[]){
+      if(set.icon) sources.add(set.icon);
+    }
+  
     for(const profile of D.profiles){
       for(const build of profile.builds||[]){
         const weapon=getRecommendedWeapon(profile,build);
-        if(weapon?.icon) recommendedWeaponSources.push(weapon.icon);
-      }
-    }
-    const recommendedEchoSources=[];
-    for(const profile of D.profiles){
-      for(const build of profile.builds||[]){
         const echo=getRecommendedMainEcho(profile,build);
-        if(echo?.icon) recommendedEchoSources.push(echo.icon);
+  
+        if(weapon?.icon) sources.add(weapon.icon);
+        if(echo?.icon) sources.add(echo.icon);
       }
     }
-    const sources=[...new Set([...recommendedWeaponSources,...recommendedEchoSources].filter(Boolean))];
-    let index=0;
-    const pump=()=>{
-      const stop=Math.min(index+4,sources.length);
-      while(index<stop) loadAsset(sources[index++]).catch(()=>{});
-      if(index<sources.length) setTimeout(pump,90);
-    };
-    setTimeout(pump,40);
+  
+    for(const src of sources){
+      loadAsset(src).catch(()=>{});
+    }
   }
 
   Object.assign(D,{
