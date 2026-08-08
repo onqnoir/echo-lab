@@ -3955,30 +3955,41 @@ button.clear-slot:focus-visible {
   }
 }
 
-@keyframes contourDriftSecondary {
-  0% {
-    background-position:56% 40%,12% 8%,88% 74%;
-    transform:scale(1.16) translate3d(0,0,0);
+@keyframes contourDriftPrimary {
+  0%,
+  100% {
+    transform:translate3d(0,0,0) scale(1.06);
   }
 
   25% {
-    background-position:53% 45%,12% 8%,88% 74%;
-    transform:scale(1.135) translate3d(-0.35%,0.45%,0);
+    transform:translate3d(1.2%,-0.6%,0) scale(1.075);
   }
 
   50% {
-    background-position:49% 55%,12% 8%,88% 74%;
-    transform:scale(1.12) translate3d(0.45%,0.2%,0);
+    transform:translate3d(-0.8%,0.8%,0) scale(1.09);
   }
 
   75% {
-    background-position:54% 51%,12% 8%,88% 74%;
-    transform:scale(1.145) translate3d(0.2%,-0.35%,0);
+    transform:translate3d(0.7%,0.4%,0) scale(1.075);
+  }
+}
+
+@keyframes contourDriftSecondary {
+  0%,
+  100% {
+    transform:translate3d(0,0,0) scale(1.16);
   }
 
-  100% {
-    background-position:56% 40%,12% 8%,88% 74%;
-    transform:scale(1.16) translate3d(0,0,0);
+  25% {
+    transform:translate3d(-1%,0.8%,0) scale(1.135);
+  }
+
+  50% {
+    transform:translate3d(0.9%,0.5%,0) scale(1.12);
+  }
+
+  75% {
+    transform:translate3d(0.5%,-0.7%,0) scale(1.145);
   }
 }
 
@@ -3988,22 +3999,43 @@ body::before {
   background-repeat:no-repeat;
   background-position:48% 46%;
   background-size:172% auto;
-  mask-image:linear-gradient(to bottom,rgba(0,0,0,.99),rgba(0,0,0,.84) 58%,rgba(0,0,0,.42));
-  will-change:transform,background-position;
+  mask-image:linear-gradient(
+    to bottom,
+    rgba(0,0,0,.99),
+    rgba(0,0,0,.84) 58%,
+    rgba(0,0,0,.42)
+  );
+  backface-visibility:hidden;
+  will-change:transform;
   animation:contourDriftPrimary 24s ease-in-out infinite;
 }
 
 body::after {
   opacity:.24;
-  background-image:url("../assets/ui/topographic-wave.svg"),
-    radial-gradient(circle at 12% 8%,rgba(122,225,234,.06),transparent 25rem),
-    radial-gradient(circle at 88% 74%,rgba(122,225,234,.042),transparent 28rem);
+  background-image:
+    url("../assets/ui/topographic-wave.svg"),
+    radial-gradient(
+      circle at 12% 8%,
+      rgba(122,225,234,.06),
+      transparent 25rem
+    ),
+    radial-gradient(
+      circle at 88% 74%,
+      rgba(122,225,234,.042),
+      transparent 28rem
+    );
   background-repeat:no-repeat,no-repeat,no-repeat;
   background-position:56% 40%,12% 8%,88% 74%;
   background-size:198% auto,auto,auto;
   mix-blend-mode:screen;
-  will-change:transform,background-position;
+  backface-visibility:hidden;
+  will-change:transform;
   animation:contourDriftSecondary 32s ease-in-out infinite;
+}
+
+body.app-paused::before,
+body.app-paused::after {
+  animation-play-state:paused;
 }
 
 .res-card.selecting .avatar-stage::after {
@@ -4158,4 +4190,54 @@ html::-webkit-scrollbar-thumb {
 
 html::-webkit-scrollbar-thumb:hover {
   background:linear-gradient(#477681,#57909a);
+}
+
+.build-set-icon {
+  position:relative;
+  display:grid;
+  place-items:center;
+  width:32px;
+  height:32px;
+  overflow:hidden;
+}
+
+.build-switch .build-set-icon {
+  width:28px;
+  height:28px;
+}
+
+.build-set-icon img {
+  display:block;
+  width:100%;
+  height:100%;
+  object-fit:contain;
+}
+
+.asset-loading > img {
+  opacity:0 !important;
+}
+
+.asset-loading::after {
+  content:"";
+  position:absolute;
+  z-index:5;
+  width:18px;
+  height:18px;
+  box-sizing:border-box;
+  border:2px solid rgba(139,235,242,.16);
+  border-top-color:#8beaf1;
+  border-radius:50%;
+  animation:assetSpinner .65s linear infinite;
+}
+
+.echo-identity-frame.asset-loading::after,
+.equipment-frame.asset-loading::after {
+  width:20px;
+  height:20px;
+}
+
+@keyframes assetSpinner {
+  to {
+    transform:rotate(360deg);
+  }
 }
