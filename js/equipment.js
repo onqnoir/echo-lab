@@ -659,6 +659,4 @@
     isAssetReady,
     preloadEquipmentAssets
   });
-
-  preloadEquipmentAssets();
 })();
