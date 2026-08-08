@@ -395,43 +395,37 @@
 function setImageSource(img,src,fallback){
   if(!img) return;
 
+  const frame=img.closest(
+    ".equipment-frame,.echo-identity-frame,.build-set-icon"
+  );
+
   const target=src || fallback || "";
   const token=String(Date.now())+Math.random();
 
   img.dataset.assetToken=token;
 
-  if(!target){
-    img.removeAttribute("src");
-    return;
-  }
-
-  const apply=value=>{
-    if(img.dataset.assetToken!==token || !value) return;
-
-    img.onerror=()=>{
-      if(img.dataset.assetToken!==token || !fallback || value===fallback) return;
-      img.onerror=null;
-      img.src=fallback;
-    };
-
-    img.src=value;
+  const loading=state=>{
+    frame?.classList.toggle("asset-loading",state);
   };
 
-  if(D.isAssetReady?.(target)){
-    apply(target);
-    return;
-  }
+  const apply=value=>{
+    if(img.dataset.assetToken!==token) return;
 
-  if(!D.loadAsset){
-    apply(target);
-    return;
-  }
+    if(!value){
+      img.removeAttribute("src");
+      loading(false);
+      return;
+    }
 
-  D.loadAsset(target)
-    .then(()=>apply(target))
-    .catch(()=>{
-      if(img.dataset.assetToken!==token || !fallback || target===fallback) return;
+    img.onerror=null;
+    img.src=value;
+    loading(false);
+  };
 
+  const fail=()=>{
+    if(img.dataset.assetToken!==token) return;
+
+    if(fallback && fallback!==target){
       if(D.isAssetReady?.(fallback)){
         apply(fallback);
         return;
@@ -439,10 +433,41 @@ function setImageSource(img,src,fallback){
 
       D.loadAsset?.(fallback)
         ?.then(()=>apply(fallback))
-        .catch(()=>{});
-    });
-}
+        .catch(()=>apply(""));
+      return;
+    }
 
+    apply("");
+  };
+
+  if(!target){
+    apply("");
+    return;
+  }
+
+  if(D.isAssetReady?.(target)){
+    apply(target);
+    return;
+  }
+
+  loading(true);
+
+  if(D.loadAsset){
+    D.loadAsset(target)
+      .then(()=>apply(target))
+      .catch(fail);
+    return;
+  }
+
+  img.onload=()=>{
+    if(img.dataset.assetToken!==token) return;
+    loading(false);
+  };
+
+  img.onerror=fail;
+  img.src=target;
+}
+  
 function preloadSources(sources){
   const unique=[...new Set((sources||[]).filter(Boolean))];
 
@@ -715,15 +740,44 @@ function preloadEchoOptionsForSlot(slotKey=$("slot")?.value){
   }
 
   function renderBuildSwitch(){
-    const builds=baseProfile.builds;
-    const root=$("buildSwitch");
-    root.className=`build-switch count-${builds.length}`;
-    root.innerHTML=builds.map(b=>{
-      const set=setInfo(b.bestSet);
-      return `<button class="build-btn ${b.id===buildId?"active":""}" data-build="${b.id}" title="${set.name}" aria-label="${set.name}"><img src="${set.icon}" alt=""><span>${set.name}</span></button>`;
-    }).join("");
-    [...root.querySelectorAll(".build-btn")].forEach(b=>b.addEventListener("click",()=>switchBuild(b.dataset.build)));
-  }
+  const builds=baseProfile.builds;
+  const root=$("buildSwitch");
+
+  root.className=`build-switch count-${builds.length}`;
+
+  root.innerHTML=builds.map(b=>{
+    const set=setInfo(b.bestSet);
+
+    return `
+      <button
+        class="build-btn ${b.id===buildId?"active":""}"
+        data-build="${b.id}"
+        title="${set.name}"
+        aria-label="${set.name}"
+      >
+        <span class="build-set-icon">
+          <img alt="">
+        </span>
+        <span>${set.name}</span>
+      </button>`;
+  }).join("");
+
+  [...root.querySelectorAll(".build-btn")].forEach(button=>{
+    const build=builds.find(b=>b.id===button.dataset.build);
+    const set=setInfo(build.bestSet);
+
+    setImageSource(
+      button.querySelector(".build-set-icon img"),
+      set.icon,
+      null
+    );
+
+    button.addEventListener(
+      "click",
+      ()=>switchBuild(button.dataset.build)
+    );
+  });
+}
 
   function switchBuild(id){
     if(id===buildId || !baseProfile.builds.some(b=>b.id===id)) return;
@@ -989,7 +1043,7 @@ function preloadEchoOptionsForSlot(slotKey=$("slot")?.value){
         <div class="sonata-state" data-sonata-state>CHECKING SET</div>
       </div>
       <div class="echo-identity-row ${recommendedSelected?"recommended-selected":""}">
-        <span class="echo-identity-frame"><img class="echo-identity-icon" src="${set.icon}" alt="${echoData.name}"></span>
+        <span class="echo-identity-frame"><img class="echo-identity-icon" alt="${echoData.name}"></span>
         <label><span class="echo-select-title">Echo</span><select class="echoIdentity" ${echoOptions.length?"":"disabled"}>${echoOptions.length?echoOptions.map(e=>`<option value="${e.id}" ${e.id===echoData.id?"selected":""}>${recommendedSlot&&e.id===recommended.id?"★ ":""}${e.name}</option>`).join(""):`<option value="">Echo artwork not installed</option>`}</select></label>
       </div>
       <div class="echo-main">
