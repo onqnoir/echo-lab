@@ -17,6 +17,7 @@
   let buildId = baseProfile.builds[0].id;
   let weaponId = baseProfile.defaultWeaponId || null;
   let mainEchoId = null;
+  let profileSelectionToken = 0;
   const filters = {attribute:"All",rarity:"All",weapon:"All",role:"All"};
 
   const n = id => Number($(id).value) || 0;
@@ -391,26 +392,114 @@
     return `<img src="${src}" alt="${alt}" class="${klass}" width="256" height="256" loading="lazy" decoding="async" fetchpriority="low" onerror="this.style.display='none';this.nextElementSibling.style.display='grid'"><span class="${fallback}" style="display:none">${alt.slice(0,2).toUpperCase()}</span>`;
   }
 
-  function setImageSource(img,src,fallback){
-    if(!img) return;
-    const target=src || fallback || "";
-    const token=String(Date.now())+Math.random();
-    img.dataset.assetToken=token;
-    if(!target){ img.removeAttribute("src"); return; }
+function setImageSource(img,src,fallback){
+  if(!img) return;
+
+  const target=src || fallback || "";
+  const token=String(Date.now())+Math.random();
+
+  img.dataset.assetToken=token;
+
+  if(!target){
+    img.removeAttribute("src");
+    return;
+  }
+
+  const apply=value=>{
+    if(img.dataset.assetToken!==token || !value) return;
 
     img.onerror=()=>{
-      if(img.dataset.assetToken!==token || !fallback || target===fallback) return;
+      if(img.dataset.assetToken!==token || !fallback || value===fallback) return;
       img.onerror=null;
       img.src=fallback;
     };
-    img.src=target;
-    D.loadAsset?.(target)?.catch(()=>{
-      if(img.dataset.assetToken===token && fallback && target!==fallback){
-        img.onerror=null;
-        img.src=fallback;
-      }
-    });
+
+    img.src=value;
+  };
+
+  if(D.isAssetReady?.(target)){
+    apply(target);
+    return;
   }
+
+  if(!D.loadAsset){
+    apply(target);
+    return;
+  }
+
+  D.loadAsset(target)
+    .then(()=>apply(target))
+    .catch(()=>{
+      if(img.dataset.assetToken!==token || !fallback || target===fallback) return;
+
+      if(D.isAssetReady?.(fallback)){
+        apply(fallback);
+        return;
+      }
+
+      D.loadAsset?.(fallback)
+        ?.then(()=>apply(fallback))
+        .catch(()=>{});
+    });
+}
+
+function preloadSources(sources){
+  const unique=[...new Set((sources||[]).filter(Boolean))];
+
+  if(!D.loadAsset || !unique.length){
+    return Promise.resolve();
+  }
+
+  return Promise.allSettled(
+    unique.map(src=>D.loadAsset(src))
+  );
+}
+
+function profileAssetSources(profile){
+  if(!profile) return [];
+
+  const sources=[];
+
+  for(const build of profile.builds||[]){
+    const setIds=new Set([
+      build.bestSet,
+      ...Object.values(build.setPlan?.slots||{}),
+      ...(build.secondarySetChoices?.allowed||[])
+    ].filter(Boolean));
+
+    for(const setId of setIds){
+      const set=D.setById?.[setId];
+      if(set?.icon) sources.push(set.icon);
+    }
+
+    const weapon=D.getRecommendedWeapon?.(profile,build);
+    const echo=D.getRecommendedMainEcho?.(profile,build);
+
+    if(weapon?.icon) sources.push(weapon.icon);
+    if(echo?.icon) sources.push(echo.icon);
+  }
+
+  return sources;
+}
+
+function warmProfileAssets(profile){
+  return preloadSources(profileAssetSources(profile));
+}
+
+function preloadEchoOptionsForSlot(slotKey=$("slot")?.value){
+  if(!slotKey) return Promise.resolve();
+
+  const meta=slotMeta()[slotKey];
+  if(!meta) return Promise.resolve();
+
+  const set=setInfo(setForSlot(slotKey));
+  const echoes=D.getEchoOptions?.(set.id,meta.cost)||[];
+
+  return preloadSources([
+    set.icon,
+    ...echoes.map(echo=>echo.icon)
+  ]);
+}
 
   function renderFilters(){
     const attrs=["All","Aero","Glacio","Fusion","Electro","Spectro","Havoc"];
@@ -546,26 +635,60 @@
         <span>Change one of the filters above.</span>
       </div>`;
 
-    [...$("roster").querySelectorAll(".res-card")].forEach(card=>card.addEventListener("click",()=>requestCharacterSelection(card.dataset.id)));
+    [...$("roster").querySelectorAll(".res-card")].forEach(card=>{
+  const warm=()=>{
+    const profile=D.profiles.find(p=>p.id===card.dataset.id);
+    warmProfileAssets(profile);
+  };
+
+  card.addEventListener("pointerenter",warm,{once:true});
+  card.addEventListener("pointerdown",warm,{once:true});
+  card.addEventListener("focus",warm,{once:true});
+
+  card.addEventListener("click",()=>{
+    requestCharacterSelection(card.dataset.id);
+  });
+});
     requestAnimationFrame(()=>updateRosterLayout(list.length));
   }
 
-  function requestCharacterSelection(id){
-    if(id===baseProfile.id) return;
-    const active=$("roster").querySelector(".res-card.active");
-    const target=$("roster").querySelector(`.res-card[data-id="${id}"]`);
-    if(active){
-      active.classList.remove("active","selecting");
-      active.classList.add("leaving");
-      active.setAttribute("aria-pressed","false");
-      window.setTimeout(()=>active.classList.remove("leaving"),240);
-    }
-    target?.classList.remove("leaving");
-    target?.classList.add("active","selecting");
-    target?.setAttribute("aria-pressed","true");
-    selectCharacter(id);
-    window.setTimeout(()=>target?.classList.remove("selecting"),620);
+  async function requestCharacterSelection(id){
+  const token=++profileSelectionToken;
+
+  if(id===baseProfile.id) return;
+
+  const next=D.profiles.find(p=>p.id===id);
+  if(!next) return;
+
+  const active=$("roster").querySelector(".res-card.active");
+  const target=$("roster").querySelector(`.res-card[data-id="${id}"]`);
+
+  if(active){
+    active.classList.remove("active","selecting");
+    active.classList.add("leaving");
+    active.setAttribute("aria-pressed","false");
+
+    window.setTimeout(
+      ()=>active.classList.remove("leaving"),
+      240
+    );
   }
+
+  target?.classList.remove("leaving");
+  target?.classList.add("active","selecting");
+  target?.setAttribute("aria-pressed","true");
+
+  await warmProfileAssets(next);
+
+  if(token!==profileSelectionToken) return;
+
+  selectCharacter(id);
+
+  window.setTimeout(
+    ()=>target?.classList.remove("selecting"),
+    620
+  );
+}
 
   function triggerProfileSwap(){
     const panel=document.querySelector(".profile-panel");
@@ -1269,12 +1392,18 @@
   }
 
   function loadSelectedSlot(){
-    const {buildState}=currentBuildState(),slot=$("slot").value,meta=slotMeta()[slot],saved=buildState.echoes?.[slot]||null;
-    renderEcho("echoA","Echo A",meta.cost,saved);
-    renderEcho("echoB","Echo B",meta.cost,saved);
-    renderLoadout();
-    compare();
-  }
+  const {buildState}=currentBuildState();
+  const slot=$("slot").value;
+  const meta=slotMeta()[slot];
+  const saved=buildState.echoes?.[slot]||null;
+
+  preloadEchoOptionsForSlot(slot);
+
+  renderEcho("echoA","Echo A",meta.cost,saved);
+  renderEcho("echoB","Echo B",meta.cost,saved);
+  renderLoadout();
+  compare();
+}
 
   function loadSavedBuild(){
     const {buildState}=currentBuildState();
