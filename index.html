@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#060a0d">
+  <link rel="icon" href="assets/ui/echo-lab-favicon.ico" sizes="any">
+  <link rel="icon" type="image/webp" href="assets/ui/echo-lab-favicon-32.webp" sizes="32x32">
+  <title>WuWa Echo Lab</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <main class="shell">
+    <header class="header">
+      <div>
+        <div class="overline">WUTHERING WAVES / ENDGAME ECHO TOOL</div>
+        <h1>ECHO LAB</h1>
+      </div>
+      <div class="header-note">
+        <span class="signal-dot"></span>
+        <b>RESONANCE ANALYSIS</b>
+        <small>DROP · COMPARE · EQUIP</small>
+      </div>
+    </header>
+
+    <section class="panel roster-panel">
+      <div class="filter-groups">
+        <div class="filter-group">
+          <span>ATTRIBUTE</span>
+          <div id="attributeFilters" class="filter-row"></div>
+        </div>
+        <div class="filter-group compact-filter">
+          <span>RARITY</span>
+          <div id="rarityFilters" class="filter-row"></div>
+        </div>
+        <div class="filter-group weapon-filter-group">
+          <span>WEAPON</span>
+          <div id="weaponFilters" class="filter-row"></div>
+        </div>
+        <div class="filter-group role-filter-group">
+          <span>ROLE</span>
+          <div id="roleFilters" class="filter-row"></div>
+        </div>
+      </div>
+      <div class="roster-wrap">
+        <div class="roster-grid" id="roster"></div>
+      </div>
+    </section>
+
+    <section class="panel profile-panel">
+      <div class="profile-main">
+        <div class="profile-identity">
+          <div class="selected-avatar-wrap" id="selectedAvatarWrap">
+            <img id="selectedAvatar" alt="" class="selected-avatar">
+            <div id="selectedFallback" class="selected-fallback"></div>
+          </div>
+          <div class="identity-copy">
+            <div class="identity-name-line">
+              <strong id="selectedName">—</strong>
+              <span id="rarityBadge" class="rarity-badge">—</span>
+            </div>
+            <div class="identity-icons">
+              <span class="icon-label"><img id="selectedAttributeIcon" alt=""><b id="selectedAttribute">—</b></span>
+              <span class="icon-label"><img id="selectedWeaponIcon" alt=""><b id="selectedWeapon">—</b></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="build-context">
+          <div class="context-head"><span>SONATA PRESET</span></div>
+          <div id="buildSwitch" class="build-switch"></div>
+        </div>
+
+        <div class="equipment-card recommendation-card weapon-recommendation-card">
+          <span class="equipment-label">RECOMMENDED WEAPON</span>
+          <div class="recommended-equipment">
+            <span class="equipment-frame weapon-frame"><img id="recommendedWeaponIcon" alt="" class="equipment-icon"></span>
+            <strong id="recommendedWeaponName">—</strong>
+          </div>
+        </div>
+
+        <div class="equipment-card recommendation-card echo-recommendation-card">
+          <span class="equipment-label">RECOMMENDED MAIN ECHO</span>
+          <div class="recommended-equipment">
+            <span class="equipment-frame echo-frame"><img id="recommendedEchoIcon" alt="" class="equipment-icon echo-icon"></span>
+            <strong id="recommendedEchoName">—</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="recommendation-row">
+        <div class="mini-rec"><span>4-COST TARGET</span><strong id="rec4">—</strong></div>
+        <div class="mini-rec"><span>3-COST TARGET</span><strong id="rec3">—</strong></div>
+        <div class="mini-rec"><span>1-COST TARGET</span><strong id="rec1">—</strong></div>
+        <div class="mini-rec er-rec"><span>ER TARGET</span><strong id="recEr">—</strong></div>
+        <div class="mini-rec subs-rec"><span>SUBSTATS</span><strong id="recSubs">—</strong></div>
+      </div>
+
+      <div class="build-line">
+        <label><span id="primaryLabel">ATK</span><input id="atk" type="number" step="1" value="2300"></label>
+        <label>CRIT Rate %<input id="cr" type="number" step="0.1" value="70"></label>
+        <label>CRIT DMG %<input id="cd" type="number" step="0.1" value="250"></label>
+        <label class="er-field">Energy Regen %<input id="er" type="number" step="0.1" value="120"></label>
+        <button id="saveBuild">SAVE BUILD</button>
+      </div>
+    </section>
+
+    <section class="panel loadout-panel">
+      <div class="loadout-top">
+        <div>
+          <span>SAVED LOADOUT</span>
+          <strong id="loadoutBuildName">ENDGAME</strong>
+        </div>
+        <div id="setControls" class="set-controls" aria-label="Sonata set layout"></div>
+        <select id="slot" class="visually-hidden" aria-label="Selected Echo slot"></select>
+      </div>
+      <div class="loadout-strip" id="loadoutStrip"></div>
+    </section>
+
+    <section class="panel comparison-panel">
+      <div class="stat-comparison" aria-label="Live stat comparison between Echo A and Echo B">
+        <div class="stat-shift" id="shiftPrimary">
+          <small id="shiftPrimaryLabel">ATK</small>
+          <div class="stat-flow"><span id="shiftPrimaryA">—</span><i aria-hidden="true">→</i><strong id="shiftPrimaryB">—</strong></div>
+        </div>
+        <div class="stat-shift" id="shiftCr">
+          <small>CRIT RATE</small>
+          <div class="stat-flow"><span id="shiftCrA">—</span><i aria-hidden="true">→</i><strong id="shiftCrB">—</strong></div>
+        </div>
+        <div class="stat-shift" id="shiftCd">
+          <small>CRIT DMG</small>
+          <div class="stat-flow"><span id="shiftCdA">—</span><i aria-hidden="true">→</i><strong id="shiftCdB">—</strong></div>
+        </div>
+        <div class="stat-shift" id="shiftEr">
+          <small>ENERGY REGEN</small>
+          <div class="stat-flow"><span id="shiftErA">—</span><i aria-hidden="true">→</i><strong id="shiftErB">—</strong></div>
+        </div>
+      </div>
+      <div class="result-panel result-inline">
+        <div class="result-row">
+          <div><div class="overline">PERSONAL ROTATION COMPARISON</div><h2 id="verdict">READY</h2></div>
+          <div class="delta" id="delta">—</div>
+        </div>
+        <div class="changes" id="changes"></div>
+        <p class="comparison-scope">Reference personal rotation · Main Echo skill, healing and team DPS are not valued.</p>
+      </div>
+    </section>
+
+    <section class="echo-grid">
+      <article class="panel echo" id="echoA"></article>
+      <article class="panel echo" id="echoB"></article>
+    </section>
+
+    <section class="actions">
+      <button id="saveA">SAVE A TO SLOT</button>
+      <button class="equip" id="equipB">EQUIP B</button>
+      <span class="action-spacer"></span>
+      <button id="export">EXPORT PROFILE</button>
+      <label class="file-btn">IMPORT PROFILE<input id="importFile" type="file" accept=".json,application/json"></label>
+    </section>
+
+
+    <footer class="project-footer">
+      <strong>ECHO LAB</strong>
+      <span>fan-made endgame Echo comparator · built by onqnoir</span>
+      <small>Wuthering Waves game content and trademarks belong to Kuro Games.</small>
+    </footer>
+  </main>
+
+  <script src="js/data.js"></script>
+  <script src="js/echo_catalog.js"></script>
+  <script src="js/equipment.js"></script>
+  <script src="js/math.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
